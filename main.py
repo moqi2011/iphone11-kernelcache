@@ -1,5 +1,7 @@
+import json
 import os.path
 import shutil
+import subprocess
 from datetime import datetime
 
 import requests
@@ -85,6 +87,8 @@ def gen_upload_cmd(_):
                 path1 = os.path.join(root, name)
                 path0 = path1.split("/")
                 assets_name = "_".join(path0[-2:])
+                # "iPhone12,1" to "iPhone12.1"
+                assets_name = assets_name.replace(",", ".")
                 if assets_name in exists_assets_names:
                     continue
                 # https://docs.github.com/en/rest/releases/assets?apiVersion=2022-11-28#upload-a-release-asset
@@ -101,6 +105,44 @@ curl -L \
     print("\n".join(cmds))
 
 
+def ver_to_int(ver: str):
+    def fill_zero(s, n):
+        return "000000"[0:n - len(s)] + s
+
+    ver_s0 = ver.split(".")
+    ver_s1 = ["00", "00", "00"]
+    for i in range(len(ver_s0)):
+        ver_s1[i] = fill_zero(ver_s0[i], 2)
+
+    return int("".join(ver_s1))
+
+
+def get_kernel_version():
+    version_map = {}
+    for root, dirs, files in os.walk(".", topdown=False):
+        for name in files:
+            if name.startswith("kernelcache.release") and name.endswith(DEVICE_IDENTIFIER):
+                path1 = os.path.join(root, name)
+                path0 = path1.split("/")
+                system_version = path0[-2]
+                kernel_version = subprocess.check_output(["ipsw", "kernel", "version", path1])
+                version_map[system_version] = kernel_version.decode().split("\n")[0].strip()
+    return version_map
+
+
+def gen_kernel_version_table(_):
+    version_map = get_kernel_version()
+    version_list = list(version_map.keys())
+    version_list.sort(key=ver_to_int)
+    table_rows = []
+    for system_version in version_list:
+        kernel_version = version_map[system_version]
+        row = f"| {system_version} | {kernel_version} |"
+        table_rows.append(row)
+
+    open("kernel_version_table", "w").write("\n".join(table_rows))
+
+
 if __name__ == '__main__':
     # https://docs.python.org/zh-cn/3/library/argparse.html
     parser = argparse.ArgumentParser(description='')
@@ -115,6 +157,9 @@ if __name__ == '__main__':
 
     parser_subparsers = subparsers.add_parser('gen_upload_cmd')
     parser_subparsers.set_defaults(func=gen_upload_cmd)
+
+    parser_subparsers = subparsers.add_parser('gen_kernel_version_table')
+    parser_subparsers.set_defaults(func=gen_kernel_version_table)
 
     args = parser.parse_args()
     args.func(args)
