@@ -1,5 +1,9 @@
 # iphone11-kernelcache
 
+```
+sudo snap install ipsw
+```
+
 | System Version | Kernel Version |
 |----------------|----------------|
 | 13.0 | Darwin Kernel Version 19.0.0: Mon Aug 12 20:20:03 PDT 2019; root:xnu-6153.0.103.12~1/RELEASE_ARM64_T8030 |
